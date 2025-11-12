@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 
 export default function CareerPathAI() {
-  const [currentPage, setCurrentPage] = useState('auth'); // auth / quiz / results
+  const [currentPage, setCurrentPage] = useState('auth'); // auth / quiz
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [userEmail, setUserEmail] = useState('');
@@ -16,7 +16,7 @@ export default function CareerPathAI() {
     { id: 1, email: 'demo@example.com', name: 'Demo User', joinDate: '2024-11-01', lastLogin: '2024-11-12', completedQuiz: true }
   ]);
 
-  const [step, setStep] = useState('intro'); // intro / skills / interests / workstyle / education / results
+  const [step, setStep] = useState('skills'); // skills / interests / workstyle / education
   const [selections, setSelections] = useState({
     skills: [],
     interests: [],
@@ -24,7 +24,6 @@ export default function CareerPathAI() {
     education: null
   });
   const [recommendations, setRecommendations] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   const skillOptions = ['Problem Solving', 'Communication', 'Creativity', 'Leadership', 'Technical Skills', 'Data Analysis', 'Design', 'Writing'];
   const interestOptions = ['Technology', 'Healthcare', 'Business', 'Education', 'Environment', 'Arts', 'Finance', 'Social Work'];
@@ -43,7 +42,6 @@ export default function CareerPathAI() {
   };
 
   const steps = ['skills', 'interests', 'workstyle', 'education'];
-
   const COLORS = ['#4F46E5', '#06B6D4', '#EC4899', '#F59E0B', '#10B981'];
 
   // ---------------- Authentication ----------------
@@ -54,8 +52,6 @@ export default function CareerPathAI() {
       setCurrentUser(user);
       setUserEmail('');
       setUserPassword('');
-      setCurrentPage('quiz');
-      setStep('skills');
     } else {
       alert('Invalid credentials. Demo: demo@example.com / demo123');
     }
@@ -83,8 +79,7 @@ export default function CareerPathAI() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser(null);
-    setCurrentPage('auth');
-    setStep('intro');
+    setStep('skills');
     setSelections({ skills: [], interests: [], workStyle: [], education: null });
     setRecommendations([]);
   };
@@ -93,7 +88,9 @@ export default function CareerPathAI() {
   const toggleSelection = (category, value) => {
     setSelections(prev => ({
       ...prev,
-      [category]: prev[category].includes(value)
+      [category]: category === 'education'
+        ? value
+        : prev[category].includes(value)
         ? prev[category].filter(item => item !== value)
         : [...prev[category], value]
     }));
@@ -104,32 +101,31 @@ export default function CareerPathAI() {
     if (currentIdx < steps.length - 1) {
       setStep(steps[currentIdx + 1]);
     } else {
-      getRecommendations();
+      generateRecommendations();
     }
   };
 
   // ---------------- Generate Recommendations ----------------
-  const getRecommendations = () => {
-    setLoading(true);
-    setTimeout(() => {
-      const interests = selections.interests.join('|');
-      const skills = selections.skills.slice(0, 2).join('|');
-      
-      let matched = [];
-      for (const key in careerDatabase) {
-        if (key.includes(interests) || key.includes(skills)) {
-          matched = matched.concat(careerDatabase[key]);
-        }
-      }
-      if (matched.length === 0) {
-        matched = Object.values(careerDatabase).flat().slice(0, 5);
-      }
-      const uniqueCareers = [...new Set(matched.map(c => c.role))].map(role => matched.find(c => c.role === role)).slice(0, 6);
+  const generateRecommendations = () => {
+    const interests = selections.interests.join('|');
+    const skills = selections.skills.slice(0, 2).join('|');
 
-      setRecommendations(uniqueCareers);
-      setStep('results');
-      setLoading(false);
-    }, 1000);
+    let matched = [];
+    for (const key in careerDatabase) {
+      if (key.includes(interests) || key.includes(skills)) {
+        matched = matched.concat(careerDatabase[key]);
+      }
+    }
+
+    if (matched.length === 0) {
+      matched = Object.values(careerDatabase).flat().slice(0, 5);
+    }
+
+    const uniqueCareers = [...new Set(matched.map(c => c.role))]
+      .map(role => matched.find(c => c.role === role))
+      .slice(0, 6);
+
+    setRecommendations(uniqueCareers);
   };
 
   // ---------------- Visualization Data ----------------
@@ -155,15 +151,16 @@ export default function CareerPathAI() {
     );
   }
 
-  // ---------------- Quiz Steps ----------------
-  if (currentPage === 'quiz') {
-    if (step === 'results') {
-      return (
-        <div className="min-h-screen bg-blue-50 p-6">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-indigo-700 mb-6">Career Insights</h2>
+  // ---------------- Quiz / Results ----------------
+  return (
+    <div className="min-h-screen bg-blue-50 p-6 flex flex-col items-center">
+      <div className="w-full max-w-4xl">
+        <h2 className="text-3xl font-bold text-center text-indigo-700 mb-6">Career Path AI</h2>
 
-            <div className="bg-white p-6 rounded-lg shadow mb-6">
+        {/* ---------------- Charts ---------------- */}
+        <div className="flex flex-wrap gap-6 mb-6 justify-center">
+          {skillData.length > 0 && (
+            <div className="bg-white p-6 rounded-lg shadow w-80">
               <h3 className="text-xl font-bold mb-4">Your Skills</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -174,8 +171,9 @@ export default function CareerPathAI() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-
-            <div className="bg-white p-6 rounded-lg shadow mb-6">
+          )}
+          {interestData.length > 0 && (
+            <div className="bg-white p-6 rounded-lg shadow w-80">
               <h3 className="text-xl font-bold mb-4">Your Interests</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={interestData}>
@@ -186,52 +184,76 @@ export default function CareerPathAI() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          )}
+        </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-xl font-bold mb-4">Recommended Careers</h3>
-              <ul className="list-disc pl-6">
-                {recommendations.map((c, i) => (
-                  <li key={i} className="mb-2">
-                    <strong>{c.role}</strong>: {c.description} <br/>
-                    <em>Salary:</em> {c.salary} | <em>Growth:</em> {c.growth}
-                  </li>
-                ))}
-              </ul>
-              <button onClick={handleLogout} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">Logout</button>
+        {/* ---------------- Quiz Options ---------------- */}
+        {step !== 'results' && (
+          <div className="bg-white p-6 rounded-lg shadow mb-6">
+            <h3 className="text-2xl font-bold mb-4 capitalize">{step}</h3>
+            <div className="flex flex-wrap gap-2">
+              {step === 'skills' && skillOptions.map(opt => (
+                <button
+                  key={opt}
+                  className={`px-4 py-2 rounded-lg border ${selections.skills.includes(opt) ? 'bg-indigo-600 text-white' : ''}`}
+                  onClick={() => toggleSelection('skills', opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+              {step === 'interests' && interestOptions.map(opt => (
+                <button
+                  key={opt}
+                  className={`px-4 py-2 rounded-lg border ${selections.interests.includes(opt) ? 'bg-indigo-600 text-white' : ''}`}
+                  onClick={() => toggleSelection('interests', opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+              {step === 'workstyle' && workStyleOptions.map(opt => (
+                <button
+                  key={opt}
+                  className={`px-4 py-2 rounded-lg border ${selections.workStyle.includes(opt) ? 'bg-indigo-600 text-white' : ''}`}
+                  onClick={() => toggleSelection('workStyle', opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+              {step === 'education' && educationOptions.map(opt => (
+                <button
+                  key={opt}
+                  className={`px-4 py-2 rounded-lg border ${selections.education === opt ? 'bg-indigo-600 text-white' : ''}`}
+                  onClick={() => toggleSelection('education', opt)}
+                >
+                  {opt}
+                </button>
+              ))}
             </div>
+            <button onClick={() => {
+              if(step === 'education') {
+                generateRecommendations();
+                setStep('results');
+              } else nextStep();
+            }} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">{step === 'education' ? 'See Results' : 'Next'}</button>
           </div>
-        </div>
-      );
-    }
+        )}
 
-    // Quiz Questions
-    let currentOptions = [];
-    let category = '';
-    if (step === 'skills') { currentOptions = skillOptions; category = 'skills'; }
-    if (step === 'interests') { currentOptions = interestOptions; category = 'interests'; }
-    if (step === 'workstyle') { currentOptions = workStyleOptions; category = 'workStyle'; }
-    if (step === 'education') { currentOptions = educationOptions; category = 'education'; }
-
-    return (
-      <div className="min-h-screen bg-blue-50 p-6 flex flex-col items-center">
-        <div className="bg-white p-6 rounded-lg shadow w-full max-w-xl">
-          <h2 className="text-2xl font-bold mb-4 text-indigo-700 capitalize">{step}</h2>
-          <div className="flex flex-wrap gap-2">
-            {currentOptions.map(opt => (
-              <button
-                key={opt}
-                className={`px-4 py-2 rounded-lg border ${selections[category]?.includes(opt) ? 'bg-indigo-600 text-white' : ''}`}
-                onClick={() => toggleSelection(category, opt)}
-              >
-                {opt}
-              </button>
-            ))}
+        {/* ---------------- Recommendations ---------------- */}
+        {step === 'results' && (
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-xl font-bold mb-4">Recommended Careers</h3>
+            <ul className="list-disc pl-6">
+              {recommendations.map((c, i) => (
+                <li key={i} className="mb-2">
+                  <strong>{c.role}</strong>: {c.description} <br/>
+                  <em>Salary:</em> {c.salary} | <em>Growth:</em> {c.growth}
+                </li>
+              ))}
+            </ul>
+            <button onClick={handleLogout} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">Logout</button>
           </div>
-          <button onClick={nextStep} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">{step === 'education' ? 'See Results' : 'Next'}</button>
-        </div>
+        )}
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
