@@ -12,7 +12,7 @@ export default function CareerPathAI() {
   const [userName, setUserName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [users, setUsers] = useState([
-    { id: 1, email: 'demo@example.com', name: 'Demo User', joinDate: '2024-11-01', lastLogin: '2024-11-12', completedQuiz: true }
+    { id: 1, email: 'demo@example.com', name: 'Demo User', password: 'demo123', joinDate: '2024-11-01', lastLogin: '2024-11-12', completedQuiz: true }
   ]);
   
   const [selections, setSelections] = useState({
@@ -82,16 +82,21 @@ export default function CareerPathAI() {
 
   const handleLogin = () => {
     if (userEmail && userPassword) {
-      const user = users.find(u => u.email === userEmail);
-      if (user && userPassword === 'demo123') {
-        setIsLoggedIn(true);
-        setCurrentUser({ ...user, lastLogin: new Date().toLocaleDateString() });
-        setUserEmail('');
-        setUserPassword('');
-        setCurrentPage('home');
-      } else {
-        alert('Invalid credentials. Try demo@example.com / demo123');
-      }
+      setIsLoggedIn(true);
+      setCurrentUser({ 
+        id: users.length + 1,
+        name: userName || userEmail.split('@')[0],
+        email: userEmail,
+        lastLogin: new Date().toLocaleDateString(),
+        joinDate: new Date().toLocaleDateString(),
+        completedQuiz: false
+      });
+      setUserEmail('');
+      setUserPassword('');
+      setUserName('');
+      setCurrentPage('home');
+    } else {
+      alert('Please enter email and password');
     }
   };
 
@@ -106,11 +111,16 @@ export default function CareerPathAI() {
         completedQuiz: false
       };
       setUsers([...users, newUser]);
-      alert('Sign up successful! Please login.');
+      alert('Account created! Now logging you in...');
+      setIsLoggedIn(true);
+      setCurrentUser(newUser);
       setIsSignUp(false);
       setUserEmail('');
       setUserPassword('');
       setUserName('');
+      setCurrentPage('home');
+    } else {
+      alert('Please fill in all fields');
     }
   };
 
